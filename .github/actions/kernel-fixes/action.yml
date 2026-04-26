@@ -50,6 +50,18 @@ runs:
           if ! grep -qxF '#include <trace/hooks/fs.h>' ./fs/namespace.c; then
             sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
           fi
+
+          # Fix KSU-Next API change (>= commit 8d363c43):
+          # ksu_input_hook (bool) -> ksu_is_input_hook_enabled() (function)
+          # ksu_init_rc_hook (bool) -> ksu_is_init_rc_hook_enabled() (function)
+          if grep -q "extern bool ksu_input_hook __read_mostly;" drivers/input/input.c 2>/dev/null; then
+            sed -i 's/extern bool ksu_input_hook __read_mostly;/extern bool ksu_is_input_hook_enabled(void);/' drivers/input/input.c
+            sed -i 's/if (unlikely(ksu_input_hook))/if (unlikely(ksu_is_input_hook_enabled()))/' drivers/input/input.c
+          fi
+          if grep -q "extern bool ksu_init_rc_hook __read_mostly;" fs/stat.c 2>/dev/null; then
+            sed -i 's/extern bool ksu_init_rc_hook __read_mostly;/extern bool ksu_is_init_rc_hook_enabled(void);/' fs/stat.c
+            sed -i 's/if (unlikely(ksu_init_rc_hook))/if (unlikely(ksu_is_init_rc_hook_enabled()))/' fs/stat.c
+          fi
         fi
 
     - shell: bash
